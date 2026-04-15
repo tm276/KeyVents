@@ -79,7 +79,7 @@ fun EventFeedScreen() {
             maxDistance = 2
         )
     }
-
+//time's arrow
     val scrollState = rememberScrollState()
     val dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
