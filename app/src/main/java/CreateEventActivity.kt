@@ -1,5 +1,8 @@
 package com.example.derk
 
+import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,11 +10,28 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,8 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.derk.ui.theme.DerkTheme
-import com.example.derk.Volunteer
-import com.example.derk.VolunteerStore
 
 class CreateEventActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +84,6 @@ fun CreateEventScreen() {
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
-
             Text(
                 text = "Create Event",
                 modifier = Modifier
@@ -87,13 +104,47 @@ fun CreateEventScreen() {
                     .padding(12.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                    OutlinedTextField(name, { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(phone, { phone = it }, label = { Text("Phone") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(eventName, { eventName = it }, label = { Text("Event Name") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(role, { role = it }, label = { Text("Role") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { phone = it },
+                        label = { Text("Phone") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = eventName,
+                        onValueChange = { eventName = it },
+                        label = { Text("Event Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = role,
+                        onValueChange = { role = it },
+                        label = { Text("Role") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("Notes") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -103,8 +154,6 @@ fun CreateEventScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-
-                // Submit
                 Button(
                     onClick = {
                         popupAction = "submit"
@@ -120,7 +169,6 @@ fun CreateEventScreen() {
                     Text("Submit")
                 }
 
-                // Delete
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -136,7 +184,6 @@ fun CreateEventScreen() {
             }
         }
 
-        // Popup
         if (showPopup) {
             Box(
                 modifier = Modifier
@@ -154,13 +201,10 @@ fun CreateEventScreen() {
                         )
                         .padding(24.dp)
                 ) {
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-
-                        // ✔ Confirm
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
@@ -169,17 +213,16 @@ fun CreateEventScreen() {
                                     showPopup = false
 
                                     if (popupAction == "submit") {
-                                        val newVolunteer = Volunteer(
-                                            name = name,
-                                            email = email,
-                                            phone = phone,
-                                            eventName = eventName,
-                                            role = role,
-                                            notes = notes
+                                        VolunteerStore.add(
+                                            Volunteer(
+                                                name = name,
+                                                email = email,
+                                                phone = phone,
+                                                eventName = eventName,
+                                                role = role,
+                                                notes = notes
+                                            )
                                         )
-
-                                        VolunteerStore.add(newVolunteer)
-
                                         activity?.finish()
                                     } else if (popupAction == "delete") {
                                         name = ""
@@ -188,7 +231,6 @@ fun CreateEventScreen() {
                                         eventName = ""
                                         role = ""
                                         notes = ""
-
                                         activity?.finish()
                                     }
                                 },
@@ -197,7 +239,6 @@ fun CreateEventScreen() {
                             Text("✔", color = Color.White, fontSize = 28.sp)
                         }
 
-                        // ✖ Cancel
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
