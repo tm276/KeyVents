@@ -29,7 +29,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,23 +71,18 @@ fun EventFeedScreen() {
     var searchText by remember { mutableStateOf("") }
 
     val storeVersion = VolunteerStore.version.value
-    LaunchedEffect(storeVersion) { }
 
-    val filteredVolunteers = VolunteerStore.volunteers.withIndex().filter { indexedVolunteer ->
-        val volunteer = indexedVolunteer.value
-        searchText.isBlank() ||
-                volunteer.name.contains(searchText, true) ||
-                volunteer.eventName.contains(searchText, true) ||
-                volunteer.role.contains(searchText, true) ||
-                volunteer.email.contains(searchText, true) ||
-                volunteer.phone.contains(searchText, true) ||
-                volunteer.notes.contains(searchText, true) ||
-                volunteer.date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")).contains(searchText, true) ||
-                volunteer.time.format(DateTimeFormatter.ofPattern("hh:mm a")).contains(searchText, true)
+    val filteredVolunteers: List<IndexedValue<Volunteer>> = remember(searchText, storeVersion) {
+        FuzzySearch.filterVolunteers(
+            volunteers = VolunteerStore.volunteers.toList(),
+            query = searchText,
+            maxDistance = 2
+        )
     }
 
     val scrollState = rememberScrollState()
-
+    val dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
+    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
 
     Column(
         modifier = Modifier
@@ -117,7 +111,7 @@ fun EventFeedScreen() {
         ) {
             if (filteredVolunteers.isEmpty()) {
                 Text(
-                    text = "No events yet",
+                    text = if (searchText.isBlank()) "No events yet" else "No matching results",
                     color = Color.Black
                 )
             } else {
@@ -127,9 +121,9 @@ fun EventFeedScreen() {
                         .verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    filteredVolunteers.forEach { indexedVolunteer ->
-                        val index = indexedVolunteer.index
-                        val volunteer = indexedVolunteer.value
+                    filteredVolunteers.forEach { indexedVolunteer: IndexedValue<Volunteer> ->
+                        val index: Int = indexedVolunteer.index
+                        val volunteer: Volunteer = indexedVolunteer.value
 
                         Box(
                             modifier = Modifier
@@ -145,28 +139,45 @@ fun EventFeedScreen() {
                                 }
                                 .padding(12.dp)
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Text(
                                     text = volunteer.eventName,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
 
-                                Text("Name: ${volunteer.name}", color = Color.Black)
-                                Text("Role: ${volunteer.role}", color = Color.Black)
                                 Text(
-                                    "Date: ${volunteer.date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))}",
+                                    text = "Name: ${volunteer.name}",
                                     color = Color.Black
                                 )
                                 Text(
-                                    "Time: ${volunteer.time.format(DateTimeFormatter.ofPattern("hh:mm a"))}",
+                                    text = "Role: ${volunteer.role}",
                                     color = Color.Black
                                 )
-                                Text("Email: ${volunteer.email}", color = Color.Black)
-                                Text("Phone: ${volunteer.phone}", color = Color.Black)
+                                Text(
+                                    text = "Date: ${volunteer.date.format(dateFormatter)}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Time: ${volunteer.time.format(timeFormatter)}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Email: ${volunteer.email}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Phone: ${volunteer.phone}",
+                                    color = Color.Black
+                                )
 
                                 if (volunteer.notes.isNotBlank()) {
-                                    Text("Notes: ${volunteer.notes}", color = Color.Black)
+                                    Text(
+                                        text = "Notes: ${volunteer.notes}",
+                                        color = Color.Black
+                                    )
                                 }
                             }
                         }

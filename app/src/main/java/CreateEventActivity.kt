@@ -33,9 +33,11 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,15 +99,8 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
     var selectedTime by remember { mutableStateOf<LocalTime?>(null) }
 
     var initialSelectedDateMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialSelectedDateMillis
-    )
 
-    val timePickerState = rememberTimePickerState(
-        initialHour = selectedTime?.hour ?: 12,
-        initialMinute = selectedTime?.minute ?: 0,
-        is24Hour = false
-    )
+    var formError by remember { mutableStateOf("") }
 
     LaunchedEffect(existingVolunteer) {
         if (existingVolunteer != null) {
@@ -127,6 +122,8 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
     val dateDisplay = selectedDate?.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) ?: "Select Date"
     val timeDisplay = selectedTime?.format(DateTimeFormatter.ofPattern("hh:mm a")) ?: "Select Time"
+
+    val currentSelectedTime by rememberUpdatedState(selectedTime)
 
     Box(
         modifier = Modifier
@@ -160,48 +157,69 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = {
+                            name = it
+                            formError = ""
+                        },
                         label = { Text("Name") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = {
+                            email = it
+                            formError = ""
+                        },
                         label = { Text("Email") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = phone,
-                        onValueChange = { phone = it },
+                        onValueChange = {
+                            phone = it
+                            formError = ""
+                        },
                         label = { Text("Phone") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = eventName,
-                        onValueChange = { eventName = it },
+                        onValueChange = {
+                            eventName = it
+                            formError = ""
+                        },
                         label = { Text("Event Name") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = role,
-                        onValueChange = { role = it },
+                        onValueChange = {
+                            role = it
+                            formError = ""
+                        },
                         label = { Text("Role") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = notes,
-                        onValueChange = { notes = it },
+                        onValueChange = {
+                            notes = it
+                            formError = ""
+                        },
                         label = { Text("Notes") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Button(
-                        onClick = { showDatePicker = true },
+                        onClick = {
+                            formError = ""
+                            showDatePicker = true
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -213,7 +231,10 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     }
 
                     Button(
-                        onClick = { showTimePicker = true },
+                        onClick = {
+                            formError = ""
+                            showTimePicker = true
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -222,6 +243,14 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         )
                     ) {
                         Text(timeDisplay)
+                    }
+
+                    if (formError.isNotBlank()) {
+                        Text(
+                            text = formError,
+                            color = Color(0xFFE53935),
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -247,22 +276,28 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     Text("Submit")
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(Color(0xFFE53935), CircleShape)
-                        .clickable {
-                            popupAction = "delete"
-                            showPopup = true
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🗑", color = Color.White)
+                if (isEditing) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color(0xFFE53935), CircleShape)
+                            .clickable {
+                                popupAction = "delete"
+                                showPopup = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🗑", color = Color.White)
+                    }
                 }
             }
         }
 
         if (showDatePicker) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = initialSelectedDateMillis
+            )
+
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
                 confirmButton = {
@@ -290,39 +325,47 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
         }
 
         if (showTimePicker) {
-            androidx.compose.ui.window.Dialog(
-                onDismissRequest = { showTimePicker = false }
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = Color(0xFFEDEDED)
+            key(currentSelectedTime?.hour, currentSelectedTime?.minute) {
+                val timePickerState = rememberTimePickerState(
+                    initialHour = currentSelectedTime?.hour ?: 12,
+                    initialMinute = currentSelectedTime?.minute ?: 0,
+                    is24Hour = false
+                )
+
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { showTimePicker = false }
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color(0xFFEDEDED)
                     ) {
-                        TimePicker(state = timePickerState)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Button(onClick = { showTimePicker = false }) {
-                                Text("Cancel")
-                            }
+                            TimePicker(state = timePickerState)
 
-                            Spacer(modifier = Modifier.size(8.dp))
-
-                            Button(
-                                onClick = {
-                                    selectedTime = LocalTime.of(
-                                        timePickerState.hour,
-                                        timePickerState.minute
-                                    )
-                                    showTimePicker = false
-                                }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
                             ) {
-                                Text("OK")
+                                Button(onClick = { showTimePicker = false }) {
+                                    Text("Cancel")
+                                }
+
+                                Spacer(modifier = Modifier.size(8.dp))
+
+                                Button(
+                                    onClick = {
+                                        selectedTime = LocalTime.of(
+                                            timePickerState.hour,
+                                            timePickerState.minute
+                                        )
+                                        showTimePicker = false
+                                    }
+                                ) {
+                                    Text("OK")
+                                }
                             }
                         }
                     }
@@ -371,11 +414,31 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                     .size(64.dp)
                                     .background(Color(0xFF4CAF50), CircleShape)
                                     .clickable {
-                                        showPopup = false
-
                                         if (popupAction == "submit") {
-                                            val finalDate = selectedDate ?: return@clickable
-                                            val finalTime = selectedTime ?: return@clickable
+                                            if (name.isBlank() ||
+                                                email.isBlank() ||
+                                                phone.isBlank() ||
+                                                eventName.isBlank() ||
+                                                role.isBlank()
+                                            ) {
+                                                formError = "Please fill in all required fields."
+                                                showPopup = false
+                                                return@clickable
+                                            }
+
+                                            val finalDate = selectedDate
+                                            if (finalDate == null) {
+                                                formError = "Please select a date."
+                                                showPopup = false
+                                                return@clickable
+                                            }
+
+                                            val finalTime = selectedTime
+                                            if (finalTime == null) {
+                                                formError = "Please select a time."
+                                                showPopup = false
+                                                return@clickable
+                                            }
 
                                             val volunteer = Volunteer(
                                                 name = name,
@@ -394,11 +457,13 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                                 VolunteerStore.add(volunteer)
                                             }
 
+                                            showPopup = false
                                             activity?.finish()
                                         } else if (popupAction == "delete") {
                                             if (isEditing) {
                                                 VolunteerStore.removeAt(volunteerIndex)
                                             }
+                                            showPopup = false
                                             activity?.finish()
                                         }
                                     },
