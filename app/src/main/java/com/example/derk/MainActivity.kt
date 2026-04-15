@@ -32,8 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.derk.ui.theme.DerkTheme
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +82,9 @@ fun EventFeedScreen() {
                 volunteer.role.contains(searchText, true) ||
                 volunteer.email.contains(searchText, true) ||
                 volunteer.phone.contains(searchText, true) ||
-                volunteer.notes.contains(searchText, true)
+                volunteer.notes.contains(searchText, true) ||
+                volunteer.date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")).contains(searchText, true) ||
+                volunteer.time.format(DateTimeFormatter.ofPattern("hh:mm a")).contains(searchText, true)
     }
 
     val scrollState = rememberScrollState()
@@ -147,8 +150,17 @@ fun EventFeedScreen() {
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
+
                                 Text("Name: ${volunteer.name}", color = Color.Black)
                                 Text("Role: ${volunteer.role}", color = Color.Black)
+                                Text(
+                                    "Date: ${volunteer.date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    "Time: ${volunteer.time.format(DateTimeFormatter.ofPattern("hh:mm a"))}",
+                                    color = Color.Black
+                                )
                                 Text("Email: ${volunteer.email}", color = Color.Black)
                                 Text("Phone: ${volunteer.phone}", color = Color.Black)
 

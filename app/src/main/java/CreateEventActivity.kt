@@ -21,12 +21,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.derk.ui.theme.DerkTheme
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class CreateEventActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +71,7 @@ class CreateEventActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventScreen(volunteerIndex: Int = -1) {
     val context = LocalContext.current
@@ -70,12 +83,29 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
     var showPopup by remember { mutableStateOf(false) }
     var popupAction by remember { mutableStateOf("") }
 
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var eventName by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    var selectedTime by remember { mutableStateOf<LocalTime?>(null) }
+
+    var initialSelectedDateMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialSelectedDateMillis
+    )
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = selectedTime?.hour ?: 12,
+        initialMinute = selectedTime?.minute ?: 0,
+        is24Hour = false
+    )
 
     LaunchedEffect(existingVolunteer) {
         if (existingVolunteer != null) {
@@ -85,8 +115,18 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
             eventName = existingVolunteer.eventName
             role = existingVolunteer.role
             notes = existingVolunteer.notes
+            selectedDate = existingVolunteer.date
+            selectedTime = existingVolunteer.time
+
+            initialSelectedDateMillis = existingVolunteer.date
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
         }
     }
+
+    val dateDisplay = selectedDate?.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) ?: "Select Date"
+    val timeDisplay = selectedTime?.format(DateTimeFormatter.ofPattern("hh:mm a")) ?: "Select Time"
 
     Box(
         modifier = Modifier
@@ -159,6 +199,30 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         label = { Text("Notes") },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Button(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFE082),
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text(dateDisplay)
+                    }
+
+                    Button(
+                        onClick = { showTimePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFE082),
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text(timeDisplay)
+                    }
                 }
             }
 
@@ -194,6 +258,74 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text("🗑", color = Color.White)
+                }
+            }
+        }
+
+        if (showDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                selectedDate = Instant.ofEpochMilli(millis)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                            }
+                            showDatePicker = false
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showDatePicker = false }) {
+                        Text("Cancel")
+                    }
+                }
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
+
+        if (showTimePicker) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showTimePicker = false }
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color(0xFFEDEDED)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        TimePicker(state = timePickerState)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Button(onClick = { showTimePicker = false }) {
+                                Text("Cancel")
+                            }
+
+                            Spacer(modifier = Modifier.size(8.dp))
+
+                            Button(
+                                onClick = {
+                                    selectedTime = LocalTime.of(
+                                        timePickerState.hour,
+                                        timePickerState.minute
+                                    )
+                                    showTimePicker = false
+                                }
+                            ) {
+                                Text("OK")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -242,13 +374,18 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                         showPopup = false
 
                                         if (popupAction == "submit") {
+                                            val finalDate = selectedDate ?: return@clickable
+                                            val finalTime = selectedTime ?: return@clickable
+
                                             val volunteer = Volunteer(
                                                 name = name,
                                                 email = email,
                                                 phone = phone,
                                                 eventName = eventName,
                                                 role = role,
-                                                notes = notes
+                                                notes = notes,
+                                                date = finalDate,
+                                                time = finalTime
                                             )
 
                                             if (isEditing) {
@@ -262,7 +399,6 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                             if (isEditing) {
                                                 VolunteerStore.removeAt(volunteerIndex)
                                             }
-
                                             activity?.finish()
                                         }
                                     },

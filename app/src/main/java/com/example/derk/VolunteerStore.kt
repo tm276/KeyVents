@@ -1,6 +1,8 @@
 package com.example.derk
 
 import androidx.compose.runtime.mutableIntStateOf
+import java.time.LocalDate
+import java.time.LocalTime
 
 data class Volunteer(
     val name: String,
@@ -8,7 +10,9 @@ data class Volunteer(
     val phone: String,
     val eventName: String,
     val role: String,
-    val notes: String
+    val notes: String,
+    val date: LocalDate,
+    val time: LocalTime
 )
 
 object VolunteerStore {
