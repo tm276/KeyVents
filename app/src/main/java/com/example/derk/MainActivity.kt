@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
@@ -37,10 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.derk.ui.theme.DerkTheme
-import com.example.derk.Volunteer
-import com.example.derk.VolunteerStore
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,162 +53,183 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0xFF10C75A)
                 ) {
-                    KeyventFeedScreen()
+                    EventFeedScreen()
                 }
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        VolunteerStore.version.value = VolunteerStore.version.value + 1
+    }
 }
 
 @Composable
-fun KeyventFeedScreen() {
+fun EventFeedScreen() {
     val context = LocalContext.current
     var searchText by remember { mutableStateOf("") }
-    var showPopup by remember { mutableStateOf(false) }
 
-    Box(
+    val storeVersion = VolunteerStore.version.value
+
+    val filteredVolunteers: List<IndexedValue<Volunteer>> = remember(searchText, storeVersion) {
+        FuzzySearch.filterVolunteers(
+            volunteers = VolunteerStore.volunteers.toList(),
+            query = searchText,
+            maxDistance = 2
+        )
+    }
+//time's arrow
+    val scrollState = rememberScrollState()
+    val dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
+    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF10C75A))
+            .padding(12.dp)
     ) {
-        Column(
+        Text(
+            text = "Event Feed",
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 12.dp),
+            color = Color.Black,
+            fontWeight = FontWeight.Bold
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(
+                    color = Color(0xFFF2CC4D),
+                    shape = RoundedCornerShape(20.dp)
+                )
                 .padding(12.dp)
         ) {
-            Text(
-                text = "Keyvent Feed",
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(vertical = 12.dp),
-                color = Color.Black,
-                fontWeight = FontWeight.Bold
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .background(
-                        color = Color(0xFFF2CC4D),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .padding(12.dp)
-            ) {
+            if (filteredVolunteers.isEmpty()) {
                 Text(
-                    text = "Events will show here",
+                    text = if (searchText.isBlank()) "No events yet" else "No matching results",
                     color = Color.Black
                 )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = searchText,
-                    onValueChange = { searchText = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search...") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(20.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF2CC4D),
-                        unfocusedContainerColor = Color(0xFFF2CC4D),
-                        disabledContainerColor = Color(0xFFF2CC4D),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        disabledBorderColor = Color.Transparent,
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        disabledTextColor = Color.Black,
-                        focusedPlaceholderColor = Color.DarkGray,
-                        unfocusedPlaceholderColor = Color.DarkGray,
-                        disabledPlaceholderColor = Color.DarkGray,
-                        cursorColor = Color.Black
-                    )
-                )
-
-                Box(
+            } else {
+                Column(
                     modifier = Modifier
-                        .size(56.dp)
-                        .background(
-                            color = Color(0xFFF2CC4D),
-                            shape = CircleShape
-                        )
-                        .clickable {
-                            context.startActivity(
-                                Intent(context, CreateEventActivity::class.java)
-                            )
-                        },
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Add Event",
-                        tint = Color.Black
-                    )
+                    filteredVolunteers.forEach { indexedVolunteer: IndexedValue<Volunteer> ->
+                        val index: Int = indexedVolunteer.index
+                        val volunteer: Volunteer = indexedVolunteer.value
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = Color(0xFFFFE082),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable {
+                                    val intent = Intent(context, CreateEventActivity::class.java)
+                                    intent.putExtra("volunteerIndex", index)
+                                    context.startActivity(intent)
+                                }
+                                .padding(12.dp)
+                        ) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = volunteer.eventName,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+
+                                Text(
+                                    text = "Name: ${volunteer.name}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Role: ${volunteer.role}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Date: ${volunteer.date.format(dateFormatter)}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Time: ${volunteer.time.format(timeFormatter)}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Email: ${volunteer.email}",
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "Phone: ${volunteer.phone}",
+                                    color = Color.Black
+                                )
+
+                                if (volunteer.notes.isNotBlank()) {
+                                    Text(
+                                        text = "Notes: ${volunteer.notes}",
+                                        color = Color.Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
             }
         }
 
-        if (showPopup) {
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Search...") },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFF2CC4D),
+                    unfocusedContainerColor = Color(0xFFF2CC4D),
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                )
+            )
+
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                    .size(56.dp)
+                    .background(
+                        color = Color(0xFFF2CC4D),
+                        shape = CircleShape
+                    )
+                    .clickable {
+                        val intent = Intent(context, CreateEventActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 120.dp)
-                        .background(
-                            color = Color(0xFFEDEDED),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .padding(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color(0xFF4CAF50), CircleShape)
-                                .clickable {
-                                    showPopup = false
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✔",
-                                color = Color.White,
-                                fontSize = 28.sp
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color(0xFFE53935), CircleShape)
-                                .clickable {
-                                    showPopup = false
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✖",
-                                color = Color.White,
-                                fontSize = 28.sp
-                            )
-                        }
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Event",
+                    tint = Color.Black
+                )
             }
         }
     }

@@ -1,29 +1,44 @@
 package com.example.derk
 
-// Data structure
+import androidx.compose.runtime.mutableIntStateOf
+import java.time.LocalDate
+import java.time.LocalTime
+
 data class Volunteer(
     val name: String,
     val email: String,
     val phone: String,
     val eventName: String,
     val role: String,
-    val notes: String
+    val notes: String,
+    val date: LocalDate,
+    val time: LocalTime
 )
 
-// Simple in-memory storage (vector-like)
 object VolunteerStore {
-
     val volunteers = mutableListOf<Volunteer>()
+    var version = mutableIntStateOf(0)
 
     fun add(volunteer: Volunteer) {
         volunteers.add(volunteer)
+        version.value = version.value + 1
     }
 
-    fun remove(volunteer: Volunteer) {
-        volunteers.remove(volunteer)
+    fun update(index: Int, volunteer: Volunteer) {
+        if (index in volunteers.indices) {
+            volunteers[index] = volunteer
+            version.value = version.value + 1
+        }
     }
 
-    fun clear() {
-        volunteers.clear()
+    fun removeAt(index: Int) {
+        if (index in volunteers.indices) {
+            volunteers.removeAt(index)
+            version.value = version.value + 1
+        }
+    }
+
+    fun get(index: Int): Volunteer? {
+        return if (index in volunteers.indices) volunteers[index] else null
     }
 }
