@@ -29,11 +29,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,7 +61,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // trigger refresh when coming back
         VolunteerStore.version.value = VolunteerStore.version.value + 1
     }
 }
@@ -74,16 +73,15 @@ fun EventFeedScreen() {
     val storeVersion = VolunteerStore.version.value
     LaunchedEffect(storeVersion) { }
 
-    val volunteers = VolunteerStore.volunteers
-
-    val filteredVolunteers = volunteers.filter {
+    val filteredVolunteers = VolunteerStore.volunteers.withIndex().filter { indexedVolunteer ->
+        val volunteer = indexedVolunteer.value
         searchText.isBlank() ||
-                it.name.contains(searchText, true) ||
-                it.eventName.contains(searchText, true) ||
-                it.role.contains(searchText, true) ||
-                it.email.contains(searchText, true) ||
-                it.phone.contains(searchText, true) ||
-                it.notes.contains(searchText, true)
+                volunteer.name.contains(searchText, true) ||
+                volunteer.eventName.contains(searchText, true) ||
+                volunteer.role.contains(searchText, true) ||
+                volunteer.email.contains(searchText, true) ||
+                volunteer.phone.contains(searchText, true) ||
+                volunteer.notes.contains(searchText, true)
     }
 
     val scrollState = rememberScrollState()
@@ -94,7 +92,6 @@ fun EventFeedScreen() {
             .background(Color(0xFF10C75A))
             .padding(12.dp)
     ) {
-
         Text(
             text = "Event Feed",
             modifier = Modifier
@@ -114,9 +111,11 @@ fun EventFeedScreen() {
                 )
                 .padding(12.dp)
         ) {
-
             if (filteredVolunteers.isEmpty()) {
-                Text("No events yet", color = Color.Black)
+                Text(
+                    text = "No events yet",
+                    color = Color.Black
+                )
             } else {
                 Column(
                     modifier = Modifier
@@ -124,8 +123,9 @@ fun EventFeedScreen() {
                         .verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-
-                    filteredVolunteers.forEach { volunteer ->
+                    filteredVolunteers.forEach { indexedVolunteer ->
+                        val index = indexedVolunteer.index
+                        val volunteer = indexedVolunteer.value
 
                         Box(
                             modifier = Modifier
@@ -134,16 +134,19 @@ fun EventFeedScreen() {
                                     color = Color(0xFFFFE082),
                                     shape = RoundedCornerShape(16.dp)
                                 )
+                                .clickable {
+                                    val intent = Intent(context, CreateEventActivity::class.java)
+                                    intent.putExtra("volunteerIndex", index)
+                                    context.startActivity(intent)
+                                }
                                 .padding(12.dp)
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-
                                 Text(
                                     text = volunteer.eventName,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
-
                                 Text("Name: ${volunteer.name}", color = Color.Black)
                                 Text("Role: ${volunteer.role}", color = Color.Black)
                                 Text("Email: ${volunteer.email}", color = Color.Black)
@@ -155,6 +158,8 @@ fun EventFeedScreen() {
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
             }
         }
@@ -166,7 +171,6 @@ fun EventFeedScreen() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },

@@ -1,8 +1,5 @@
 package com.example.derk
 
-import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,13 +44,15 @@ class CreateEventActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val volunteerIndex = intent.getIntExtra("volunteerIndex", -1)
+
         setContent {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0xFF10C75A)
                 ) {
-                    CreateEventScreen()
+                    CreateEventScreen(volunteerIndex = volunteerIndex)
                 }
             }
         }
@@ -60,9 +60,12 @@ class CreateEventActivity : ComponentActivity() {
 }
 
 @Composable
-fun CreateEventScreen() {
+fun CreateEventScreen(volunteerIndex: Int = -1) {
     val context = LocalContext.current
     val activity = context as? Activity
+
+    val existingVolunteer = if (volunteerIndex >= 0) VolunteerStore.get(volunteerIndex) else null
+    val isEditing = existingVolunteer != null
 
     var showPopup by remember { mutableStateOf(false) }
     var popupAction by remember { mutableStateOf("") }
@@ -73,6 +76,17 @@ fun CreateEventScreen() {
     var eventName by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+
+    LaunchedEffect(existingVolunteer) {
+        if (existingVolunteer != null) {
+            name = existingVolunteer.name
+            email = existingVolunteer.email
+            phone = existingVolunteer.phone
+            eventName = existingVolunteer.eventName
+            role = existingVolunteer.role
+            notes = existingVolunteer.notes
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -85,7 +99,7 @@ fun CreateEventScreen() {
                 .padding(12.dp)
         ) {
             Text(
-                text = "Create Event",
+                text = if (isEditing) "Edit Event" else "Create Event",
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 12.dp),
@@ -201,20 +215,34 @@ fun CreateEventScreen() {
                         )
                         .padding(24.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color(0xFF4CAF50), CircleShape)
-                                .clickable {
-                                    showPopup = false
+                        Text(
+                            text = if (popupAction == "delete" && isEditing) {
+                                "Do you wish to delete this item"
+                            } else {
+                                "Do you wish to continue with changes"
+                            },
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                                    if (popupAction == "submit") {
-                                        VolunteerStore.add(
-                                            Volunteer(
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(Color(0xFF4CAF50), CircleShape)
+                                    .clickable {
+                                        showPopup = false
+
+                                        if (popupAction == "submit") {
+                                            val volunteer = Volunteer(
                                                 name = name,
                                                 email = email,
                                                 phone = phone,
@@ -222,33 +250,38 @@ fun CreateEventScreen() {
                                                 role = role,
                                                 notes = notes
                                             )
-                                        )
-                                        activity?.finish()
-                                    } else if (popupAction == "delete") {
-                                        name = ""
-                                        email = ""
-                                        phone = ""
-                                        eventName = ""
-                                        role = ""
-                                        notes = ""
-                                        activity?.finish()
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✔", color = Color.White, fontSize = 28.sp)
-                        }
 
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color(0xFFE53935), CircleShape)
-                                .clickable {
-                                    showPopup = false
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✖", color = Color.White, fontSize = 28.sp)
+                                            if (isEditing) {
+                                                VolunteerStore.update(volunteerIndex, volunteer)
+                                            } else {
+                                                VolunteerStore.add(volunteer)
+                                            }
+
+                                            activity?.finish()
+                                        } else if (popupAction == "delete") {
+                                            if (isEditing) {
+                                                VolunteerStore.removeAt(volunteerIndex)
+                                            }
+
+                                            activity?.finish()
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("✔", color = Color.White, fontSize = 28.sp)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(Color(0xFFE53935), CircleShape)
+                                    .clickable {
+                                        showPopup = false
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("✖", color = Color.White, fontSize = 28.sp)
+                            }
                         }
                     }
                 }
