@@ -141,14 +141,6 @@ fun EventFeedScreen() {
             }
         }
 
-        if (!notificationsEnabled) {
-            Text(
-                text = "Notifications are turned off for all events in Settings.",
-                color = EmptyStateText,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
