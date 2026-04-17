@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
@@ -113,6 +114,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
     var eventName by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var notificationsEnabled by remember { mutableStateOf(false) }
 
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     var selectedTime by remember { mutableStateOf<LocalTime?>(null) }
@@ -129,6 +131,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
             eventName = existingVolunteer.eventName
             role = existingVolunteer.role
             notes = existingVolunteer.notes
+            notificationsEnabled = existingVolunteer.notificationsEnabled
             selectedDate = existingVolunteer.date
             selectedTime = existingVolunteer.time
 
@@ -261,6 +264,31 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         minLines = 3,
                         colors = accessibleTextFieldColors()
                     )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Event notification",
+                                color = PrimaryText,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Notify this phone for this event",
+                                color = SecondaryText
+                            )
+                        }
+
+                        Switch(
+                            checked = notificationsEnabled,
+                            onCheckedChange = { notificationsEnabled = it }
+                        )
+                    }
 
                     Button(
                         onClick = {
@@ -516,7 +544,8 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                             role = role,
                                             notes = notes,
                                             date = finalDate,
-                                            time = finalTime
+                                            time = finalTime,
+                                            notificationsEnabled = notificationsEnabled
                                         )
 
                                         if (isEditing) {
