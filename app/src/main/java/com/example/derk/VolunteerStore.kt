@@ -12,7 +12,8 @@ data class Volunteer(
     val role: String,
     val notes: String,
     val date: LocalDate,
-    val time: LocalTime
+    val time: LocalTime,
+    val notificationsEnabled: Boolean = false
 )
 
 object VolunteerStore {
