@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,15 +15,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
@@ -43,15 +48,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.derk.ui.theme.DerkTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+private val ScreenBackground = Color(0xFF121212)
+private val PanelBackground = Color(0xFF1E1E1E)
+private val PrimaryAction = Color(0xFF64B5F6)
+private val SecondaryAction = Color(0xFF263238)
+private val DestructiveAction = Color(0xFFE57373)
+private val PrimaryText = Color(0xFFF5F5F5)
+private val SecondaryText = Color(0xFFCFD8DC)
+private val BorderColor = Color(0xFF90A4AE)
+private val ErrorColor = Color(0xFFFF8A80)
+private val DialogBackground = Color(0xFF1E1E1E)
 
 class CreateEventActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +83,7 @@ class CreateEventActivity : ComponentActivity() {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF10C75A)
+                    color = ScreenBackground
                 ) {
                     CreateEventScreen(volunteerIndex = volunteerIndex)
                 }
@@ -120,15 +139,16 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
         }
     }
 
-    val dateDisplay = selectedDate?.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) ?: "Select Date"
-    val timeDisplay = selectedTime?.format(DateTimeFormatter.ofPattern("hh:mm a")) ?: "Select Time"
+    val dateDisplay = selectedDate?.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) ?: "Select date"
+    val timeDisplay = selectedTime?.format(DateTimeFormatter.ofPattern("hh:mm a")) ?: "Select time"
 
     val currentSelectedTime by rememberUpdatedState(selectedTime)
+    val scrollState = rememberScrollState()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF10C75A))
+            .background(ScreenBackground)
     ) {
         Column(
             modifier = Modifier
@@ -139,8 +159,9 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                 text = if (isEditing) "Edit Event" else "Create Event",
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(vertical = 12.dp),
-                color = Color.Black,
+                    .padding(vertical = 12.dp)
+                    .semantics { heading() },
+                color = PrimaryText,
                 fontWeight = FontWeight.Bold
             )
 
@@ -149,12 +170,15 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     .fillMaxWidth()
                     .weight(1f)
                     .background(
-                        color = Color(0xFFF2CC4D),
+                        color = PanelBackground,
                         shape = RoundedCornerShape(20.dp)
                     )
                     .padding(12.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = name,
                         onValueChange = {
@@ -162,7 +186,11 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             formError = ""
                         },
                         label = { Text("Name") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("Enter volunteer name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = formError.isNotBlank() && name.isBlank(),
+                        colors = accessibleTextFieldColors()
                     )
 
                     OutlinedTextField(
@@ -172,7 +200,11 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             formError = ""
                         },
                         label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("Enter email address") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = formError.isNotBlank() && email.isBlank(),
+                        colors = accessibleTextFieldColors()
                     )
 
                     OutlinedTextField(
@@ -182,7 +214,11 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             formError = ""
                         },
                         label = { Text("Phone") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("Enter phone number") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = formError.isNotBlank() && phone.isBlank(),
+                        colors = accessibleTextFieldColors()
                     )
 
                     OutlinedTextField(
@@ -191,8 +227,12 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             eventName = it
                             formError = ""
                         },
-                        label = { Text("Event Name") },
-                        modifier = Modifier.fillMaxWidth()
+                        label = { Text("Event name") },
+                        placeholder = { Text("Enter event name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = formError.isNotBlank() && eventName.isBlank(),
+                        colors = accessibleTextFieldColors()
                     )
 
                     OutlinedTextField(
@@ -202,7 +242,11 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             formError = ""
                         },
                         label = { Text("Role") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("Enter volunteer role") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        isError = formError.isNotBlank() && role.isBlank(),
+                        colors = accessibleTextFieldColors()
                     )
 
                     OutlinedTextField(
@@ -212,7 +256,10 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             formError = ""
                         },
                         label = { Text("Notes") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("Optional notes") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        colors = accessibleTextFieldColors()
                     )
 
                     Button(
@@ -223,11 +270,11 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFE082),
-                            contentColor = Color.Black
+                            containerColor = SecondaryAction,
+                            contentColor = PrimaryText
                         )
                     ) {
-                        Text(dateDisplay)
+                        Text("Date: $dateDisplay")
                     }
 
                     Button(
@@ -238,18 +285,21 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFE082),
-                            contentColor = Color.Black
+                            containerColor = SecondaryAction,
+                            contentColor = PrimaryText
                         )
                     ) {
-                        Text(timeDisplay)
+                        Text("Time: $timeDisplay")
                     }
 
                     if (formError.isNotBlank()) {
                         Text(
                             text = formError,
-                            color = Color(0xFFE53935),
-                            fontWeight = FontWeight.Bold
+                            color = ErrorColor,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.semantics {
+                                liveRegion = LiveRegionMode.Assertive
+                            }
                         )
                     }
                 }
@@ -269,25 +319,31 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF2CC4D),
+                        containerColor = PrimaryAction,
                         contentColor = Color.Black
                     )
                 ) {
-                    Text("Submit")
+                    Text(if (isEditing) "Save Changes" else "Submit")
                 }
 
                 if (isEditing) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(Color(0xFFE53935), CircleShape)
-                            .clickable {
-                                popupAction = "delete"
-                                showPopup = true
-                            },
-                        contentAlignment = Alignment.Center
+                    Button(
+                        onClick = {
+                            popupAction = "delete"
+                            showPopup = true
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DestructiveAction,
+                            contentColor = Color.Black
+                        )
                     ) {
-                        Text("🗑", color = Color.White)
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Delete")
                     }
                 }
             }
@@ -337,12 +393,18 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                 ) {
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = Color(0xFFEDEDED)
+                        color = DialogBackground
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            Text(
+                                text = "Select time",
+                                color = PrimaryText,
+                                fontWeight = FontWeight.Bold
+                            )
+
                             TimePicker(state = timePickerState)
 
                             Row(
@@ -353,7 +415,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                     Text("Cancel")
                                 }
 
-                                Spacer(modifier = Modifier.size(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 Button(
                                     onClick = {
@@ -377,7 +439,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                    .background(Color.Black.copy(alpha = 0.6f)),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -385,7 +447,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 120.dp)
                         .background(
-                            color = Color(0xFFEDEDED),
+                            color = DialogBackground,
                             shape = RoundedCornerShape(24.dp)
                         )
                         .padding(24.dp)
@@ -397,91 +459,103 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     ) {
                         Text(
                             text = if (popupAction == "delete" && isEditing) {
-                                "Do you wish to delete this item"
+                                "Delete this event?"
                             } else {
-                                "Do you wish to continue with changes"
+                                "Continue with these changes?"
                             },
-                            color = Color.Black,
+                            color = PrimaryText,
                             fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = if (popupAction == "delete" && isEditing) {
+                                "This action removes the event."
+                            } else {
+                                "Review the information before confirming."
+                            },
+                            color = SecondaryText
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color(0xFF4CAF50), CircleShape)
-                                    .clickable {
-                                        if (popupAction == "submit") {
-                                            if (name.isBlank() ||
-                                                email.isBlank() ||
-                                                phone.isBlank() ||
-                                                eventName.isBlank() ||
-                                                role.isBlank()
-                                            ) {
-                                                formError = "Please fill in all required fields."
-                                                showPopup = false
-                                                return@clickable
-                                            }
-
-                                            val finalDate = selectedDate
-                                            if (finalDate == null) {
-                                                formError = "Please select a date."
-                                                showPopup = false
-                                                return@clickable
-                                            }
-
-                                            val finalTime = selectedTime
-                                            if (finalTime == null) {
-                                                formError = "Please select a time."
-                                                showPopup = false
-                                                return@clickable
-                                            }
-
-                                            val volunteer = Volunteer(
-                                                name = name,
-                                                email = email,
-                                                phone = phone,
-                                                eventName = eventName,
-                                                role = role,
-                                                notes = notes,
-                                                date = finalDate,
-                                                time = finalTime
-                                            )
-
-                                            if (isEditing) {
-                                                VolunteerStore.update(volunteerIndex, volunteer)
-                                            } else {
-                                                VolunteerStore.add(volunteer)
-                                            }
-
+                            Button(
+                                onClick = {
+                                    if (popupAction == "submit") {
+                                        if (name.isBlank() ||
+                                            email.isBlank() ||
+                                            phone.isBlank() ||
+                                            eventName.isBlank() ||
+                                            role.isBlank()
+                                        ) {
+                                            formError = "Please fill in all required fields."
                                             showPopup = false
-                                            activity?.finish()
-                                        } else if (popupAction == "delete") {
-                                            if (isEditing) {
-                                                VolunteerStore.removeAt(volunteerIndex)
-                                            }
-                                            showPopup = false
-                                            activity?.finish()
+                                            return@Button
                                         }
-                                    },
-                                contentAlignment = Alignment.Center
+
+                                        val finalDate = selectedDate
+                                        if (finalDate == null) {
+                                            formError = "Please select a date."
+                                            showPopup = false
+                                            return@Button
+                                        }
+
+                                        val finalTime = selectedTime
+                                        if (finalTime == null) {
+                                            formError = "Please select a time."
+                                            showPopup = false
+                                            return@Button
+                                        }
+
+                                        val volunteer = Volunteer(
+                                            name = name,
+                                            email = email,
+                                            phone = phone,
+                                            eventName = eventName,
+                                            role = role,
+                                            notes = notes,
+                                            date = finalDate,
+                                            time = finalTime
+                                        )
+
+                                        if (isEditing) {
+                                            VolunteerStore.update(volunteerIndex, volunteer)
+                                        } else {
+                                            VolunteerStore.add(volunteer)
+                                        }
+
+                                        showPopup = false
+                                        activity?.finish()
+                                    } else if (popupAction == "delete") {
+                                        if (isEditing) {
+                                            VolunteerStore.removeAt(volunteerIndex)
+                                        }
+                                        showPopup = false
+                                        activity?.finish()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (popupAction == "delete") DestructiveAction else PrimaryAction,
+                                    contentColor = Color.Black
+                                )
                             ) {
-                                Text("✔", color = Color.White, fontSize = 28.sp)
+                                Icon(
+                                    imageVector = if (popupAction == "delete") Icons.Filled.Delete else Icons.Filled.Check,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(if (popupAction == "delete") "Confirm Delete" else "Confirm")
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .background(Color(0xFFE53935), CircleShape)
-                                    .clickable {
-                                        showPopup = false
-                                    },
-                                contentAlignment = Alignment.Center
+                            Button(
+                                onClick = { showPopup = false },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SecondaryAction,
+                                    contentColor = PrimaryText
+                                )
                             ) {
-                                Text("✖", color = Color.White, fontSize = 28.sp)
+                                Text("Cancel")
                             }
                         }
                     }
@@ -490,3 +564,23 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
         }
     }
 }
+
+@Composable
+private fun accessibleTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = PanelBackground,
+    unfocusedContainerColor = PanelBackground,
+    focusedBorderColor = PrimaryAction,
+    unfocusedBorderColor = BorderColor,
+    focusedTextColor = PrimaryText,
+    unfocusedTextColor = PrimaryText,
+    focusedLabelColor = PrimaryAction,
+    unfocusedLabelColor = SecondaryText,
+    focusedPlaceholderColor = SecondaryText,
+    unfocusedPlaceholderColor = SecondaryText,
+    focusedSupportingTextColor = SecondaryText,
+    unfocusedSupportingTextColor = SecondaryText,
+    errorBorderColor = ErrorColor,
+    errorLabelColor = ErrorColor,
+    errorTextColor = PrimaryText,
+    cursorColor = PrimaryAction
+)

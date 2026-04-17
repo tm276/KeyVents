@@ -16,13 +16,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -37,10 +36,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.derk.ui.theme.DerkTheme
 import java.time.format.DateTimeFormatter
+
+private val ScreenBackground = Color(0xFF121212)
+private val PanelBackground = Color(0xFF1E1E1E)
+private val CardBackground = Color(0xFF263238)
+private val PrimaryAction = Color(0xFF64B5F6)
+private val BorderColor = Color(0xFF90A4AE)
+private val PrimaryText = Color(0xFFF5F5F5)
+private val SecondaryText = Color(0xFFCFD8DC)
+private val EmptyStateText = Color(0xFFB0BEC5)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +65,7 @@ class MainActivity : ComponentActivity() {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF10C75A)
+                    color = ScreenBackground
                 ) {
                     EventFeedScreen()
                 }
@@ -87,32 +101,38 @@ fun EventFeedScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF10C75A))
+            .background(ScreenBackground)
             .padding(12.dp)
     ) {
         Text(
             text = "Event Feed",
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(vertical = 12.dp),
-            color = Color.Black,
+                .padding(vertical = 12.dp)
+                .semantics { heading() },
+            color = PrimaryText,
             fontWeight = FontWeight.Bold
         )
-//timmy
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .background(
-                    color = Color(0xFFF2CC4D),
+                    color = PanelBackground,
                     shape = RoundedCornerShape(20.dp)
                 )
                 .padding(12.dp)
+                .semantics {
+                    contentDescription = "Event feed results"
+                    stateDescription =
+                        if (filteredVolunteers.isEmpty()) "No events shown" else "${filteredVolunteers.size} events shown"
+                }
         ) {
             if (filteredVolunteers.isEmpty()) {
                 Text(
                     text = if (searchText.isBlank()) "No events yet" else "No matching results",
-                    color = Color.Black
+                    color = EmptyStateText
                 )
             } else {
                 Column(
@@ -121,17 +141,35 @@ fun EventFeedScreen() {
                         .verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    filteredVolunteers.forEach { indexedVolunteer: IndexedValue<Volunteer> ->
-                        val index: Int = indexedVolunteer.index
-                        val volunteer: Volunteer = indexedVolunteer.value
+                    filteredVolunteers.forEach { indexedVolunteer ->
+                        val index = indexedVolunteer.index
+                        val volunteer = indexedVolunteer.value
+
+                        val cardAnnouncement = buildString {
+                            append("Event ${volunteer.eventName}. ")
+                            append("Volunteer ${volunteer.name}. ")
+                            append("Role ${volunteer.role}. ")
+                            append("Date ${volunteer.date.format(dateFormatter)}. ")
+                            append("Time ${volunteer.time.format(timeFormatter)}. ")
+                            append("Email ${volunteer.email}. ")
+                            append("Phone ${volunteer.phone}. ")
+                            if (volunteer.notes.isNotBlank()) {
+                                append("Notes ${volunteer.notes}. ")
+                            }
+                            append("Double tap to edit event.")
+                        }
 
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(
-                                    color = Color(0xFFFFE082),
+                                    color = CardBackground,
                                     shape = RoundedCornerShape(16.dp)
                                 )
+                                .semantics(mergeDescendants = true) {
+                                    role = Role.Button
+                                    contentDescription = cardAnnouncement
+                                }
                                 .clickable {
                                     val intent = Intent(context, CreateEventActivity::class.java)
                                     intent.putExtra("volunteerIndex", index)
@@ -145,38 +183,38 @@ fun EventFeedScreen() {
                                 Text(
                                     text = volunteer.eventName,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.Black
+                                    color = PrimaryText
                                 )
 
                                 Text(
                                     text = "Name: ${volunteer.name}",
-                                    color = Color.Black
+                                    color = SecondaryText
                                 )
                                 Text(
                                     text = "Role: ${volunteer.role}",
-                                    color = Color.Black
+                                    color = SecondaryText
                                 )
                                 Text(
                                     text = "Date: ${volunteer.date.format(dateFormatter)}",
-                                    color = Color.Black
+                                    color = SecondaryText
                                 )
                                 Text(
                                     text = "Time: ${volunteer.time.format(timeFormatter)}",
-                                    color = Color.Black
+                                    color = SecondaryText
                                 )
                                 Text(
                                     text = "Email: ${volunteer.email}",
-                                    color = Color.Black
+                                    color = SecondaryText
                                 )
                                 Text(
                                     text = "Phone: ${volunteer.phone}",
-                                    color = Color.Black
+                                    color = SecondaryText
                                 )
 
                                 if (volunteer.notes.isNotBlank()) {
                                     Text(
                                         text = "Notes: ${volunteer.notes}",
-                                        color = Color.Black
+                                        color = SecondaryText
                                     )
                                 }
                             }
@@ -198,37 +236,49 @@ fun EventFeedScreen() {
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Search...") },
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics {
+                        contentDescription = "Search events"
+                        stateDescription = if (searchText.isBlank()) {
+                            "Search field is empty"
+                        } else {
+                            "Search text entered"
+                        }
+                    },
+                label = { Text("Search events") },
+                placeholder = { Text("Search by name, role, date, time, or notes") },
                 singleLine = true,
                 shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF2CC4D),
-                    unfocusedContainerColor = Color(0xFFF2CC4D),
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    focusedContainerColor = PanelBackground,
+                    unfocusedContainerColor = PanelBackground,
+                    focusedBorderColor = PrimaryAction,
+                    unfocusedBorderColor = BorderColor,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedLabelColor = PrimaryAction,
+                    unfocusedLabelColor = SecondaryText,
+                    focusedPlaceholderColor = EmptyStateText,
+                    unfocusedPlaceholderColor = EmptyStateText,
+                    cursorColor = PrimaryAction
                 )
             )
 
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(
-                        color = Color(0xFFF2CC4D),
-                        shape = CircleShape
-                    )
-                    .clickable {
-                        val intent = Intent(context, CreateEventActivity::class.java)
-                        context.startActivity(intent)
-                    },
-                contentAlignment = Alignment.Center
+            FloatingActionButton(
+                onClick = {
+                    val intent = Intent(context, CreateEventActivity::class.java)
+                    context.startActivity(intent)
+                },
+                containerColor = PrimaryAction,
+                contentColor = Color.Black,
+                modifier = Modifier.semantics {
+                    contentDescription = "Add event"
+                }
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Add Event",
-                    tint = Color.Black
+                    contentDescription = null
                 )
             }
         }
