@@ -16,13 +16,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -85,6 +88,7 @@ fun EventFeedScreen() {
     var searchText by remember { mutableStateOf("") }
 
     val storeVersion = VolunteerStore.version.value
+    val notificationsEnabled = AppSettings.notificationsGloballyEnabled.value
 
     val filteredVolunteers: List<IndexedValue<Volunteer>> = remember(searchText, storeVersion) {
         FuzzySearch.filterVolunteers(
@@ -104,15 +108,46 @@ fun EventFeedScreen() {
             .background(ScreenBackground)
             .padding(12.dp)
     ) {
-        Text(
-            text = "Event Feed",
+        Row(
             modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(vertical = 12.dp)
-                .semantics { heading() },
-            color = PrimaryText,
-            fontWeight = FontWeight.Bold
-        )
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Spacer(modifier = Modifier.size(48.dp))
+
+            Text(
+                text = "Event Feed",
+                modifier = Modifier.semantics { heading() },
+                color = PrimaryText,
+                fontWeight = FontWeight.Bold
+            )
+
+            IconButton(
+                onClick = {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = "Open settings"
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = null,
+                    tint = PrimaryAction
+                )
+            }
+        }
+
+        if (!notificationsEnabled) {
+            Text(
+                text = "Notifications are turned off for all events in Settings.",
+                color = EmptyStateText,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -145,6 +180,12 @@ fun EventFeedScreen() {
                         val index = indexedVolunteer.index
                         val volunteer = indexedVolunteer.value
 
+                        val notificationStatus = when {
+                            !notificationsEnabled -> "Notifications off globally."
+                            volunteer.notificationsEnabled -> "Notifications on for this event."
+                            else -> "Notifications off for this event."
+                        }
+
                         val cardAnnouncement = buildString {
                             append("Event ${volunteer.eventName}. ")
                             append("Volunteer ${volunteer.name}. ")
@@ -153,6 +194,8 @@ fun EventFeedScreen() {
                             append("Time ${volunteer.time.format(timeFormatter)}. ")
                             append("Email ${volunteer.email}. ")
                             append("Phone ${volunteer.phone}. ")
+                            append(notificationStatus)
+                            append(" ")
                             if (volunteer.notes.isNotBlank()) {
                                 append("Notes ${volunteer.notes}. ")
                             }
@@ -208,6 +251,18 @@ fun EventFeedScreen() {
                                 )
                                 Text(
                                     text = "Phone: ${volunteer.phone}",
+                                    color = SecondaryText
+                                )
+                                Text(
+                                    text = "Notifications: ${
+                                        if (!notificationsEnabled) {
+                                            "Off globally"
+                                        } else if (volunteer.notificationsEnabled) {
+                                            "On"
+                                        } else {
+                                            "Off"
+                                        }
+                                    }",
                                     color = SecondaryText
                                 )
 
