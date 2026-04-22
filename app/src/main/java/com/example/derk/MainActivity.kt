@@ -87,10 +87,9 @@ fun EventFeedScreen() {
     val storeVersion = VolunteerStore.version.value
 
     val filteredVolunteers: List<IndexedValue<Volunteer>> = remember(searchText, storeVersion) {
-        FuzzySearch.filterVolunteers(
+        ExactSearch.filterVolunteers(
             volunteers = VolunteerStore.volunteers.toList(),
-            query = searchText,
-            maxDistance = 2
+            query = searchText
         )
     }
 
