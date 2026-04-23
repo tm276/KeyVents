@@ -16,11 +16,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -35,12 +36,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.derk.ui.theme.DerkTheme
-import com.example.derk.Volunteer
-import com.example.derk.VolunteerStore
+import java.time.format.DateTimeFormatter
+
+private val ScreenBackground = Color(0xFF121212)
+private val PanelBackground = Color(0xFF1E1E1E)
+private val CardBackground = Color(0xFF263238)
+private val PrimaryAction = Color(0xFF64B5F6)
+private val BorderColor = Color(0xFF90A4AE)
+private val PrimaryText = Color(0xFFF5F5F5)
+private val SecondaryText = Color(0xFFCFD8DC)
+private val EmptyStateText = Color(0xFFB0BEC5)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,164 +65,220 @@ class MainActivity : ComponentActivity() {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF10C75A)
+                    color = ScreenBackground
                 ) {
-                    KeyventFeedScreen()
+                    EventFeedScreen()
                 }
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        VolunteerStore.version.value = VolunteerStore.version.value + 1
+    }
 }
 
 @Composable
-fun KeyventFeedScreen() {
+fun EventFeedScreen() {
     val context = LocalContext.current
     var searchText by remember { mutableStateOf("") }
-    var showPopup by remember { mutableStateOf(false) }
 
-    Box(
+    val storeVersion = VolunteerStore.version.value
+
+    val filteredVolunteers: List<IndexedValue<Volunteer>> = remember(searchText, storeVersion) {
+        ExactSearch.filterVolunteers(
+            volunteers = VolunteerStore.volunteers.toList(),
+            query = searchText
+        )
+    }
+
+    val scrollState = rememberScrollState()
+    val dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
+    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF10C75A))
+            .background(ScreenBackground)
+            .padding(12.dp)
     ) {
-        Column(
+        Text(
+            text = "Event Feed",
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 12.dp)
+                .semantics { heading() },
+            color = PrimaryText,
+            fontWeight = FontWeight.Bold
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(
+                    color = PanelBackground,
+                    shape = RoundedCornerShape(20.dp)
+                )
                 .padding(12.dp)
+                .semantics {
+                    contentDescription = "Event feed results"
+                    stateDescription =
+                        if (filteredVolunteers.isEmpty()) "No events shown" else "${filteredVolunteers.size} events shown"
+                }
         ) {
-            Text(
-                text = "Keyvent Feed",
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(vertical = 12.dp),
-                color = Color.Black,
-                fontWeight = FontWeight.Bold
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .background(
-                        color = Color(0xFFF2CC4D),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .padding(12.dp)
-            ) {
+            if (filteredVolunteers.isEmpty()) {
                 Text(
-                    text = "Events will show here",
-                    color = Color.Black
+                    text = if (searchText.isBlank()) "No events yet" else "No matching results",
+                    color = EmptyStateText
                 )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = searchText,
-                    onValueChange = { searchText = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search...") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(20.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF2CC4D),
-                        unfocusedContainerColor = Color(0xFFF2CC4D),
-                        disabledContainerColor = Color(0xFFF2CC4D),
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        disabledBorderColor = Color.Transparent,
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        disabledTextColor = Color.Black,
-                        focusedPlaceholderColor = Color.DarkGray,
-                        unfocusedPlaceholderColor = Color.DarkGray,
-                        disabledPlaceholderColor = Color.DarkGray,
-                        cursorColor = Color.Black
-                    )
-                )
-
-                Box(
+            } else {
+                Column(
                     modifier = Modifier
-                        .size(56.dp)
-                        .background(
-                            color = Color(0xFFF2CC4D),
-                            shape = CircleShape
-                        )
-                        .clickable {
-                            context.startActivity(
-                                Intent(context, CreateEventActivity::class.java)
-                            )
-                        },
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Add Event",
-                        tint = Color.Black
-                    )
+                    filteredVolunteers.forEach { indexedVolunteer ->
+                        val index = indexedVolunteer.index
+                        val volunteer = indexedVolunteer.value
+
+                        val cardAnnouncement = buildString {
+                            append("Event ${volunteer.eventName}. ")
+                            append("Volunteer ${volunteer.name}. ")
+                            append("Role ${volunteer.role}. ")
+                            append("Date ${volunteer.date.format(dateFormatter)}. ")
+                            append("Time ${volunteer.time.format(timeFormatter)}. ")
+                            append("Email ${volunteer.email}. ")
+                            append("Phone ${volunteer.phone}. ")
+                            if (volunteer.notes.isNotBlank()) {
+                                append("Notes ${volunteer.notes}. ")
+                            }
+                            append("Double tap to edit event.")
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = CardBackground,
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .semantics(mergeDescendants = true) {
+                                    role = Role.Button
+                                    contentDescription = cardAnnouncement
+                                }
+                                .clickable {
+                                    val intent = Intent(context, CreateEventActivity::class.java)
+                                    intent.putExtra("volunteerIndex", index)
+                                    context.startActivity(intent)
+                                }
+                                .padding(12.dp)
+                        ) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = volunteer.eventName,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryText
+                                )
+
+                                Text(
+                                    text = "Name: ${volunteer.name}",
+                                    color = SecondaryText
+                                )
+                                Text(
+                                    text = "Role: ${volunteer.role}",
+                                    color = SecondaryText
+                                )
+                                Text(
+                                    text = "Date: ${volunteer.date.format(dateFormatter)}",
+                                    color = SecondaryText
+                                )
+                                Text(
+                                    text = "Time: ${volunteer.time.format(timeFormatter)}",
+                                    color = SecondaryText
+                                )
+                                Text(
+                                    text = "Email: ${volunteer.email}",
+                                    color = SecondaryText
+                                )
+                                Text(
+                                    text = "Phone: ${volunteer.phone}",
+                                    color = SecondaryText
+                                )
+
+                                if (volunteer.notes.isNotBlank()) {
+                                    Text(
+                                        text = "Notes: ${volunteer.notes}",
+                                        color = SecondaryText
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
             }
         }
 
-        if (showPopup) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 120.dp)
-                        .background(
-                            color = Color(0xFFEDEDED),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .padding(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color(0xFF4CAF50), CircleShape)
-                                .clickable {
-                                    showPopup = false
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✔",
-                                color = Color.White,
-                                fontSize = 28.sp
-                            )
-                        }
+        Spacer(modifier = Modifier.height(12.dp))
 
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(Color(0xFFE53935), CircleShape)
-                                .clickable {
-                                    showPopup = false
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✖",
-                                color = Color.White,
-                                fontSize = 28.sp
-                            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics {
+                        contentDescription = "Search events"
+                        stateDescription = if (searchText.isBlank()) {
+                            "Search field is empty"
+                        } else {
+                            "Search text entered"
                         }
-                    }
+                    },
+                label = { Text("Search events") },
+                placeholder = { Text("Search by name, role, date, time, or notes") },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = PanelBackground,
+                    unfocusedContainerColor = PanelBackground,
+                    focusedBorderColor = PrimaryAction,
+                    unfocusedBorderColor = BorderColor,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedLabelColor = PrimaryAction,
+                    unfocusedLabelColor = SecondaryText,
+                    focusedPlaceholderColor = EmptyStateText,
+                    unfocusedPlaceholderColor = EmptyStateText,
+                    cursorColor = PrimaryAction
+                )
+            )
+
+            FloatingActionButton(
+                onClick = {
+                    val intent = Intent(context, CreateEventActivity::class.java)
+                    context.startActivity(intent)
+                },
+                containerColor = PrimaryAction,
+                contentColor = Color.Black,
+                modifier = Modifier.semantics {
+                    contentDescription = "Add event"
                 }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null
+                )
             }
         }
     }
