@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -60,6 +61,15 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+// Tabing -extended Feature
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 
 private val ScreenBackground = Color(0xFF121212)
 private val PanelBackground = Color(0xFF1E1E1E)
@@ -97,6 +107,7 @@ class CreateEventActivity : ComponentActivity() {
 fun CreateEventScreen(volunteerIndex: Int = -1) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val focusManager = LocalFocusManager.current
 
     val existingVolunteer = if (volunteerIndex >= 0) VolunteerStore.get(volunteerIndex) else null
     val isEditing = existingVolunteer != null
@@ -257,7 +268,19 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         },
                         label = { Text("Notes") },
                         placeholder = { Text("Optional notes") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onPreviewKeyEvent { event ->
+                                if(event.key == Key.Tab && event.type == KeyEventType.KeyDown) {
+                                    focusManager.moveFocus(
+                                        if(event.isShiftPressed) FocusDirection.Previous
+                                        else FocusDirection.Next
+                                    )
+                                    true
+                                } else{
+                                    false
+                                }
+                            },
                         minLines = 3,
                         colors = accessibleTextFieldColors()
                     )
