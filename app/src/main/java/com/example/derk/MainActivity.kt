@@ -16,16 +16,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -113,6 +119,32 @@ fun EventFeedScreen() {
             fontWeight = FontWeight.Bold
         )
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Button(
+                onClick = {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryAction,
+                    contentColor = Color.Black
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Settings")
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -155,6 +187,13 @@ fun EventFeedScreen() {
                             if (volunteer.notes.isNotBlank()) {
                                 append("Notes ${volunteer.notes}. ")
                             }
+                            append(
+                                if (VolunteerStore.areNotificationsActiveFor(index)) {
+                                    "Notifications on. "
+                                } else {
+                                    "Notifications off. "
+                                }
+                            )
                             append("Double tap to edit event.")
                         }
 
@@ -177,7 +216,7 @@ fun EventFeedScreen() {
                                 .padding(12.dp)
                         ) {
                             Column(
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
                                     text = volunteer.eventName,
@@ -214,6 +253,52 @@ fun EventFeedScreen() {
                                     Text(
                                         text = "Notes: ${volunteer.notes}",
                                         color = SecondaryText
+                                    )
+                                }
+
+                                Text(
+                                    text = "Notifications",
+                                    color = PrimaryText,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (VolunteerStore.areNotificationsActiveFor(index)) {
+                                            "On"
+                                        } else {
+                                            "Off"
+                                        },
+                                        color = SecondaryText
+                                    )
+
+                                    Switch(
+                                        checked = volunteer.notificationsEnabled,
+                                        onCheckedChange = { enabled ->
+                                            VolunteerStore.setEventNotificationsEnabled(index, enabled)
+                                        },
+                                        enabled = VolunteerStore.areGlobalNotificationsEnabled(),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.Black,
+                                            checkedTrackColor = PrimaryAction,
+                                            uncheckedThumbColor = PrimaryText,
+                                            uncheckedTrackColor = BorderColor,
+                                            disabledCheckedThumbColor = PrimaryText,
+                                            disabledCheckedTrackColor = BorderColor,
+                                            disabledUncheckedThumbColor = PrimaryText,
+                                            disabledUncheckedTrackColor = BorderColor
+                                        )
+                                    )
+                                }
+
+                                if (!VolunteerStore.areGlobalNotificationsEnabled()) {
+                                    Text(
+                                        text = "Global notifications are off in Settings",
+                                        color = EmptyStateText
                                     )
                                 }
                             }

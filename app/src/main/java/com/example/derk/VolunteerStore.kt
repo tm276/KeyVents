@@ -12,12 +12,24 @@ data class Volunteer(
     val role: String,
     val notes: String,
     val date: LocalDate,
-    val time: LocalTime
+    val time: LocalTime,
+    val notificationsEnabled: Boolean = true
 )
 
 object VolunteerStore {
     val volunteers = mutableListOf<Volunteer>()
     var version = mutableIntStateOf(0)
+
+    var globalNotificationsEnabled = mutableIntStateOf(1)
+
+    fun areGlobalNotificationsEnabled(): Boolean {
+        return globalNotificationsEnabled.intValue == 1
+    }
+
+    fun setGlobalNotificationsEnabled(enabled: Boolean) {
+        globalNotificationsEnabled.intValue = if (enabled) 1 else 0
+        version.value = version.value + 1
+    }
 
     fun add(volunteer: Volunteer) {
         volunteers.add(volunteer)
@@ -40,5 +52,18 @@ object VolunteerStore {
 
     fun get(index: Int): Volunteer? {
         return if (index in volunteers.indices) volunteers[index] else null
+    }
+
+    fun setEventNotificationsEnabled(index: Int, enabled: Boolean) {
+        if (index in volunteers.indices) {
+            val current = volunteers[index]
+            volunteers[index] = current.copy(notificationsEnabled = enabled)
+            version.value = version.value + 1
+        }
+    }
+
+    fun areNotificationsActiveFor(index: Int): Boolean {
+        val volunteer = get(index) ?: return false
+        return areGlobalNotificationsEnabled() && volunteer.notificationsEnabled
     }
 }
