@@ -20,14 +20,14 @@ object VolunteerStore {
     val volunteers = mutableListOf<Volunteer>()
     var version = mutableIntStateOf(0)
 
-    var globalNotificationsEnabled = mutableIntStateOf(1)
+    private var globalNotificationsState = mutableIntStateOf(1)
 
     fun areGlobalNotificationsEnabled(): Boolean {
-        return globalNotificationsEnabled.intValue == 1
+        return globalNotificationsState.intValue == 1
     }
 
     fun setGlobalNotificationsEnabled(enabled: Boolean) {
-        globalNotificationsEnabled.intValue = if (enabled) 1 else 0
+        globalNotificationsState.intValue = if (enabled) 1 else 0
         version.value = version.value + 1
     }
 
