@@ -106,6 +106,9 @@ class CreateEventActivity : ComponentActivity() {
         }
     }
 }
+private fun isValidPhone(phone: String): Boolean {
+    return phone.isNotBlank() && phone.all { it.isDigit() }
+}
 
 private fun hasValidDomain(email: String): Boolean {
     val trimmedEmail = email.trim()
@@ -135,6 +138,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
     var showPopup by remember { mutableStateOf(false) }
     var popupAction by remember { mutableStateOf("") }
     var showInvalidEmailDialog by remember { mutableStateOf(false) }
+    var showInvalidPhoneDialog by remember { mutableStateOf(false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -196,7 +200,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
         return Volunteer(
             name = name,
             email = email.trim(),
-            phone = phone,
+            phone = phone.trim(),
             eventName = eventName,
             role = role,
             notes = notes,
@@ -282,7 +286,13 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         },
                         label = { Text("Phone") },
                         placeholder = { Text("Enter phone number") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && phone.isNotBlank() && !isValidPhone(phone)) {
+                                    showInvalidPhoneDialog = true
+                                }
+                            },
                         singleLine = true,
                         isError = formError.isNotBlank() && phone.isBlank(),
                         colors = accessibleTextFieldColors()
@@ -677,6 +687,26 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                 }
             )
         }
+        if (showInvalidPhoneDialog) {
+            AlertDialog(
+                onDismissRequest = { },
+                title = {
+                    Text("Invalid Phone Number")
+                },
+                text = {
+                    Text("Phone number must contain only digits (0–9).")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showInvalidPhoneDialog = false
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
         if (showPopup) {
             Box(
                 modifier = Modifier
@@ -756,7 +786,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                         val volunteer = Volunteer(
                                             name = name,
                                             email = email.trim(),
-                                            phone = phone,
+                                            phone = phone.trim(),
                                             eventName = eventName,
                                             role = role,
                                             notes = notes,
