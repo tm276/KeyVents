@@ -1,10 +1,13 @@
 package com.example.derk
-
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.material3.AlertDialog
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -104,6 +107,21 @@ class CreateEventActivity : ComponentActivity() {
     }
 }
 
+private fun hasValidDomain(email: String): Boolean {
+    val trimmedEmail = email.trim()
+    val parts = trimmedEmail.split("@")
+
+    if (parts.size != 2) return false
+    if (parts[0].isBlank()) return false
+
+    val domain = parts[1]
+
+    return domain.contains(".") &&
+            !domain.startsWith(".") &&
+            !domain.endsWith(".") &&
+            !domain.contains("..")
+}
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventScreen(volunteerIndex: Int = -1) {
@@ -116,6 +134,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
     var showPopup by remember { mutableStateOf(false) }
     var popupAction by remember { mutableStateOf("") }
+    var showInvalidEmailDialog by remember { mutableStateOf(false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -176,7 +195,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
         return Volunteer(
             name = name,
-            email = email,
+            email = email.trim(),
             phone = phone,
             eventName = eventName,
             role = role,
@@ -243,7 +262,13 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         },
                         label = { Text("Email") },
                         placeholder = { Text("Enter email address") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && email.isNotBlank() && !hasValidDomain(email)) {
+                                    showInvalidEmailDialog = true
+                                }
+                            },
                         singleLine = true,
                         isError = formError.isNotBlank() && email.isBlank(),
                         colors = accessibleTextFieldColors()
@@ -632,7 +657,26 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                 }
             }
         }
-
+        if (showInvalidEmailDialog) {
+            AlertDialog(
+                onDismissRequest = { },
+                title = {
+                    Text("Invalid Email")
+                },
+                text = {
+                    Text("Invalid domain / Email could not be verified.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showInvalidEmailDialog = false
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
         if (showPopup) {
             Box(
                 modifier = Modifier
@@ -681,6 +725,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             Button(
                                 onClick = {
                                     if (popupAction == "submit") {
+
                                         if (
                                             name.isBlank() ||
                                             email.isBlank() ||
@@ -695,6 +740,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
                                         val finalDate = selectedDate
                                         if (finalDate == null) {
+
                                             formError = "Please select a date."
                                             showPopup = false
                                             return@Button
@@ -709,7 +755,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
                                         val volunteer = Volunteer(
                                             name = name,
-                                            email = email,
+                                            email = email.trim(),
                                             phone = phone,
                                             eventName = eventName,
                                             role = role,
