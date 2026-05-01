@@ -53,14 +53,14 @@ import androidx.compose.ui.unit.dp
 import com.example.derk.ui.theme.DerkTheme
 import java.time.format.DateTimeFormatter
 
-private val ScreenBackground = Color(0xFF121212)
-private val PanelBackground = Color(0xFF1E1E1E)
-private val CardBackground = Color(0xFF263238)
-private val PrimaryAction = Color(0xFF64B5F6)
-private val BorderColor = Color(0xFF90A4AE)
-private val PrimaryText = Color(0xFFF5F5F5)
-private val SecondaryText = Color(0xFFCFD8DC)
-private val EmptyStateText = Color(0xFFB0BEC5)
+private val MainScreenBackground = Color(0xFF121212)
+private val MainPanelBackground = Color(0xFF1E1E1E)
+private val MainCardBackground = Color(0xFF263238)
+private val MainPrimaryAction = Color(0xFF64B5F6)
+private val MainBorderColor = Color(0xFF90A4AE)
+private val MainPrimaryText = Color(0xFFF5F5F5)
+private val MainSecondaryText = Color(0xFFCFD8DC)
+private val MainEmptyStateText = Color(0xFFB0BEC5)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = ScreenBackground
+                    color = MainScreenBackground
                 ) {
                     EventFeedScreen()
                 }
@@ -106,7 +106,7 @@ fun EventFeedScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBackground)
+            .background(MainScreenBackground)
             .padding(12.dp)
     ) {
         Text(
@@ -115,7 +115,7 @@ fun EventFeedScreen() {
                 .align(Alignment.CenterHorizontally)
                 .padding(vertical = 12.dp)
                 .semantics { heading() },
-            color = PrimaryText,
+            color = MainPrimaryText,
             fontWeight = FontWeight.Bold
         )
 
@@ -130,9 +130,12 @@ fun EventFeedScreen() {
                     val intent = Intent(context, SettingsActivity::class.java)
                     context.startActivity(intent)
                 },
+                modifier = Modifier.semantics {
+                    contentDescription = "Open settings"
+                },
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryAction,
+                    containerColor = MainPrimaryAction,
                     contentColor = Color.Black
                 )
             ) {
@@ -150,20 +153,24 @@ fun EventFeedScreen() {
                 .fillMaxWidth()
                 .weight(1f)
                 .background(
-                    color = PanelBackground,
+                    color = MainPanelBackground,
                     shape = RoundedCornerShape(20.dp)
                 )
                 .padding(12.dp)
                 .semantics {
                     contentDescription = "Event feed results"
                     stateDescription =
-                        if (filteredVolunteers.isEmpty()) "No events shown" else "${filteredVolunteers.size} events shown"
+                        if (filteredVolunteers.isEmpty()) {
+                            "No events shown"
+                        } else {
+                            "${filteredVolunteers.size} events shown"
+                        }
                 }
         ) {
             if (filteredVolunteers.isEmpty()) {
                 Text(
                     text = if (searchText.isBlank()) "No events yet" else "No matching results",
-                    color = EmptyStateText
+                    color = MainEmptyStateText
                 )
             } else {
                 Column(
@@ -201,7 +208,7 @@ fun EventFeedScreen() {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(
-                                    color = CardBackground,
+                                    color = MainCardBackground,
                                     shape = RoundedCornerShape(16.dp)
                                 )
                                 .semantics(mergeDescendants = true) {
@@ -221,44 +228,44 @@ fun EventFeedScreen() {
                                 Text(
                                     text = volunteer.eventName,
                                     fontWeight = FontWeight.Bold,
-                                    color = PrimaryText
+                                    color = MainPrimaryText
                                 )
 
                                 Text(
                                     text = "Name: ${volunteer.name}",
-                                    color = SecondaryText
+                                    color = MainSecondaryText
                                 )
                                 Text(
                                     text = "Role: ${volunteer.role}",
-                                    color = SecondaryText
+                                    color = MainSecondaryText
                                 )
                                 Text(
                                     text = "Date: ${volunteer.date.format(dateFormatter)}",
-                                    color = SecondaryText
+                                    color = MainSecondaryText
                                 )
                                 Text(
                                     text = "Time: ${volunteer.time.format(timeFormatter)}",
-                                    color = SecondaryText
+                                    color = MainSecondaryText
                                 )
                                 Text(
                                     text = "Email: ${volunteer.email}",
-                                    color = SecondaryText
+                                    color = MainSecondaryText
                                 )
                                 Text(
                                     text = "Phone: ${volunteer.phone}",
-                                    color = SecondaryText
+                                    color = MainSecondaryText
                                 )
 
                                 if (volunteer.notes.isNotBlank()) {
                                     Text(
                                         text = "Notes: ${volunteer.notes}",
-                                        color = SecondaryText
+                                        color = MainSecondaryText
                                     )
                                 }
 
                                 Text(
-                                    text = "Notifications",
-                                    color = PrimaryText,
+                                    text = "Event notifications",
+                                    color = MainPrimaryText,
                                     fontWeight = FontWeight.SemiBold
                                 )
 
@@ -273,7 +280,7 @@ fun EventFeedScreen() {
                                         } else {
                                             "Off"
                                         },
-                                        color = SecondaryText
+                                        color = MainSecondaryText
                                     )
 
                                     Switch(
@@ -282,15 +289,20 @@ fun EventFeedScreen() {
                                             VolunteerStore.setEventNotificationsEnabled(index, enabled)
                                         },
                                         enabled = VolunteerStore.areGlobalNotificationsEnabled(),
+                                        modifier = Modifier.semantics {
+                                            contentDescription = "Notifications for ${volunteer.eventName}"
+                                            stateDescription =
+                                                if (volunteer.notificationsEnabled) "On" else "Off"
+                                        },
                                         colors = SwitchDefaults.colors(
                                             checkedThumbColor = Color.Black,
-                                            checkedTrackColor = PrimaryAction,
-                                            uncheckedThumbColor = PrimaryText,
-                                            uncheckedTrackColor = BorderColor,
-                                            disabledCheckedThumbColor = PrimaryText,
-                                            disabledCheckedTrackColor = BorderColor,
-                                            disabledUncheckedThumbColor = PrimaryText,
-                                            disabledUncheckedTrackColor = BorderColor
+                                            checkedTrackColor = MainPrimaryAction,
+                                            uncheckedThumbColor = MainPrimaryText,
+                                            uncheckedTrackColor = MainBorderColor,
+                                            disabledCheckedThumbColor = MainPrimaryText,
+                                            disabledCheckedTrackColor = MainBorderColor,
+                                            disabledUncheckedThumbColor = MainPrimaryText,
+                                            disabledUncheckedTrackColor = MainBorderColor
                                         )
                                     )
                                 }
@@ -298,7 +310,7 @@ fun EventFeedScreen() {
                                 if (!VolunteerStore.areGlobalNotificationsEnabled()) {
                                     Text(
                                         text = "Global notifications are off in Settings",
-                                        color = EmptyStateText
+                                        color = MainEmptyStateText
                                     )
                                 }
                             }
@@ -335,17 +347,17 @@ fun EventFeedScreen() {
                 singleLine = true,
                 shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = PanelBackground,
-                    unfocusedContainerColor = PanelBackground,
-                    focusedBorderColor = PrimaryAction,
-                    unfocusedBorderColor = BorderColor,
-                    focusedTextColor = PrimaryText,
-                    unfocusedTextColor = PrimaryText,
-                    focusedLabelColor = PrimaryAction,
-                    unfocusedLabelColor = SecondaryText,
-                    focusedPlaceholderColor = EmptyStateText,
-                    unfocusedPlaceholderColor = EmptyStateText,
-                    cursorColor = PrimaryAction
+                    focusedContainerColor = MainPanelBackground,
+                    unfocusedContainerColor = MainPanelBackground,
+                    focusedBorderColor = MainPrimaryAction,
+                    unfocusedBorderColor = MainBorderColor,
+                    focusedTextColor = MainPrimaryText,
+                    unfocusedTextColor = MainPrimaryText,
+                    focusedLabelColor = MainPrimaryAction,
+                    unfocusedLabelColor = MainSecondaryText,
+                    focusedPlaceholderColor = MainEmptyStateText,
+                    unfocusedPlaceholderColor = MainEmptyStateText,
+                    cursorColor = MainPrimaryAction
                 )
             )
 
@@ -354,7 +366,7 @@ fun EventFeedScreen() {
                     val intent = Intent(context, CreateEventActivity::class.java)
                     context.startActivity(intent)
                 },
-                containerColor = PrimaryAction,
+                containerColor = MainPrimaryAction,
                 contentColor = Color.Black,
                 modifier = Modifier.semantics {
                     contentDescription = "Add event"

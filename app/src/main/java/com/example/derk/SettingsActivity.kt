@@ -21,22 +21,23 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.derk.ui.theme.DerkTheme
 
-private val ScreenBackground = Color(0xFF121212)
-private val PanelBackground = Color(0xFF1E1E1E)
-private val PrimaryAction = Color(0xFF64B5F6)
-private val PrimaryText = Color(0xFFF5F5F5)
-private val SecondaryText = Color(0xFFCFD8DC)
-private val BorderColor = Color(0xFF90A4AE)
+private val SettingsScreenBackground = Color(0xFF121212)
+private val SettingsPanelBackground = Color(0xFF1E1E1E)
+private val SettingsPrimaryAction = Color(0xFF64B5F6)
+private val SettingsPrimaryText = Color(0xFFF5F5F5)
+private val SettingsSecondaryText = Color(0xFFCFD8DC)
+private val SettingsBorderColor = Color(0xFF90A4AE)
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +48,7 @@ class SettingsActivity : ComponentActivity() {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = ScreenBackground
+                    color = SettingsScreenBackground
                 ) {
                     SettingsScreen(
                         onBack = { finish() }
@@ -60,15 +61,12 @@ class SettingsActivity : ComponentActivity() {
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
-    val storeVersion = VolunteerStore.version.value
-    val globalEnabled = remember(storeVersion) {
-        VolunteerStore.areGlobalNotificationsEnabled()
-    }
+    val globalEnabled = VolunteerStore.areGlobalNotificationsEnabled()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBackground)
+            .background(SettingsScreenBackground)
             .padding(12.dp)
     ) {
         Text(
@@ -77,7 +75,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .align(Alignment.CenterHorizontally)
                 .padding(vertical = 12.dp)
                 .semantics { heading() },
-            color = PrimaryText,
+            color = SettingsPrimaryText,
             fontWeight = FontWeight.Bold
         )
 
@@ -85,7 +83,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    color = PanelBackground,
+                    color = SettingsPanelBackground,
                     shape = RoundedCornerShape(20.dp)
                 )
                 .padding(16.dp),
@@ -93,7 +91,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         ) {
             Text(
                 text = "Notifications",
-                color = PrimaryText,
+                color = SettingsPrimaryText,
                 fontWeight = FontWeight.Bold
             )
 
@@ -105,7 +103,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "All Notifications",
-                        color = PrimaryText,
+                        color = SettingsPrimaryText,
                         fontWeight = FontWeight.SemiBold
                     )
 
@@ -117,20 +115,22 @@ fun SettingsScreen(onBack: () -> Unit) {
                         } else {
                             "All event notifications are turned off."
                         },
-                        color = SecondaryText
+                        color = SettingsSecondaryText
                     )
                 }
 
                 Switch(
                     checked = globalEnabled,
-                    onCheckedChange = { enabled ->
-                        VolunteerStore.setGlobalNotificationsEnabled(enabled)
+                    onCheckedChange = { VolunteerStore.setGlobalNotificationsEnabled(it) },
+                    modifier = Modifier.semantics {
+                        contentDescription = "All notifications"
+                        stateDescription = if (globalEnabled) "On" else "Off"
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.Black,
-                        checkedTrackColor = PrimaryAction,
-                        uncheckedThumbColor = PrimaryText,
-                        uncheckedTrackColor = BorderColor
+                        checkedTrackColor = SettingsPrimaryAction,
+                        uncheckedThumbColor = SettingsPrimaryText,
+                        uncheckedTrackColor = SettingsBorderColor
                     )
                 )
             }
@@ -140,10 +140,12 @@ fun SettingsScreen(onBack: () -> Unit) {
 
         Button(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "Back to event feed" },
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryAction,
+                containerColor = SettingsPrimaryAction,
                 contentColor = Color.Black
             )
         ) {

@@ -1,10 +1,13 @@
 package com.example.derk
-
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.material3.AlertDialog
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +34,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
@@ -46,13 +51,22 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.derk.ui.theme.DerkTheme
@@ -61,26 +75,17 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-// Tabing -extended Feature
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
 
-private val ScreenBackground = Color(0xFF121212)
-private val PanelBackground = Color(0xFF1E1E1E)
-private val PrimaryAction = Color(0xFF64B5F6)
-private val SecondaryAction = Color(0xFF263238)
-private val DestructiveAction = Color(0xFFE57373)
-private val PrimaryText = Color(0xFFF5F5F5)
-private val SecondaryText = Color(0xFFCFD8DC)
-private val BorderColor = Color(0xFF90A4AE)
-private val ErrorColor = Color(0xFFFF8A80)
-private val DialogBackground = Color(0xFF1E1E1E)
+private val CreateScreenBackground = Color(0xFF121212)
+private val CreatePanelBackground = Color(0xFF1E1E1E)
+private val CreatePrimaryAction = Color(0xFF64B5F6)
+private val CreateSecondaryAction = Color(0xFF263238)
+private val CreateDestructiveAction = Color(0xFFE57373)
+private val CreatePrimaryText = Color(0xFFF5F5F5)
+private val CreateSecondaryText = Color(0xFFCFD8DC)
+private val CreateBorderColor = Color(0xFF90A4AE)
+private val CreateErrorColor = Color(0xFFFF8A80)
+private val CreateDialogBackground = Color(0xFF1E1E1E)
 
 class CreateEventActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,7 +98,7 @@ class CreateEventActivity : ComponentActivity() {
             DerkTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = ScreenBackground
+                    color = CreateScreenBackground
                 ) {
                     CreateEventScreen(volunteerIndex = volunteerIndex)
                 }
@@ -101,7 +106,25 @@ class CreateEventActivity : ComponentActivity() {
         }
     }
 }
+private fun isValidPhone(phone: String): Boolean {
+    return phone.isNotBlank() && phone.all { it.isDigit() }
+}
 
+private fun hasValidDomain(email: String): Boolean {
+    val trimmedEmail = email.trim()
+    val parts = trimmedEmail.split("@")
+
+    if (parts.size != 2) return false
+    if (parts[0].isBlank()) return false
+
+    val domain = parts[1]
+
+    return domain.contains(".") &&
+            !domain.startsWith(".") &&
+            !domain.endsWith(".") &&
+            !domain.contains("..")
+}
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEventScreen(volunteerIndex: Int = -1) {
@@ -114,9 +137,12 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
     var showPopup by remember { mutableStateOf(false) }
     var popupAction by remember { mutableStateOf("") }
+    var showInvalidEmailDialog by remember { mutableStateOf(false) }
+    var showInvalidPhoneDialog by remember { mutableStateOf(false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showNotificationPopup by remember { mutableStateOf(false) }
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -124,6 +150,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
     var eventName by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var notificationsEnabled by remember { mutableStateOf(true) }
 
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     var selectedTime by remember { mutableStateOf<LocalTime?>(null) }
@@ -142,6 +169,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
             notes = existingVolunteer.notes
             selectedDate = existingVolunteer.date
             selectedTime = existingVolunteer.time
+            notificationsEnabled = existingVolunteer.notificationsEnabled
 
             initialSelectedDateMillis = existingVolunteer.date
                 .atStartOfDay(ZoneId.systemDefault())
@@ -152,14 +180,40 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
     val dateDisplay = selectedDate?.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) ?: "Select date"
     val timeDisplay = selectedTime?.format(DateTimeFormatter.ofPattern("hh:mm a")) ?: "Select time"
-
     val currentSelectedTime by rememberUpdatedState(selectedTime)
     val scrollState = rememberScrollState()
+
+    fun buildCurrentVolunteerOrNull(): Volunteer? {
+        val finalDate = selectedDate ?: return null
+        val finalTime = selectedTime ?: return null
+
+        if (
+            name.isBlank() ||
+            email.isBlank() ||
+            phone.isBlank() ||
+            eventName.isBlank() ||
+            role.isBlank()
+        ) {
+            return null
+        }
+
+        return Volunteer(
+            name = name,
+            email = email.trim(),
+            phone = phone.trim(),
+            eventName = eventName,
+            role = role,
+            notes = notes,
+            date = finalDate,
+            time = finalTime,
+            notificationsEnabled = notificationsEnabled
+        )
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBackground)
+            .background(CreateScreenBackground)
     ) {
         Column(
             modifier = Modifier
@@ -172,7 +226,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 12.dp)
                     .semantics { heading() },
-                color = PrimaryText,
+                color = CreatePrimaryText,
                 fontWeight = FontWeight.Bold
             )
 
@@ -181,7 +235,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     .fillMaxWidth()
                     .weight(1f)
                     .background(
-                        color = PanelBackground,
+                        color = CreatePanelBackground,
                         shape = RoundedCornerShape(20.dp)
                     )
                     .padding(12.dp)
@@ -212,7 +266,13 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         },
                         label = { Text("Email") },
                         placeholder = { Text("Enter email address") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && email.isNotBlank() && !hasValidDomain(email)) {
+                                    showInvalidEmailDialog = true
+                                }
+                            },
                         singleLine = true,
                         isError = formError.isNotBlank() && email.isBlank(),
                         colors = accessibleTextFieldColors()
@@ -226,7 +286,13 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         },
                         label = { Text("Phone") },
                         placeholder = { Text("Enter phone number") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && phone.isNotBlank() && !isValidPhone(phone)) {
+                                    showInvalidPhoneDialog = true
+                                }
+                            },
                         singleLine = true,
                         isError = formError.isNotBlank() && phone.isBlank(),
                         colors = accessibleTextFieldColors()
@@ -271,13 +337,13 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .onPreviewKeyEvent { event ->
-                                if(event.key == Key.Tab && event.type == KeyEventType.KeyDown) {
+                                if (event.key == Key.Tab && event.type == KeyEventType.KeyDown) {
                                     focusManager.moveFocus(
-                                        if(event.isShiftPressed) FocusDirection.Previous
+                                        if (event.isShiftPressed) FocusDirection.Previous
                                         else FocusDirection.Next
                                     )
                                     true
-                                } else{
+                                } else {
                                     false
                                 }
                             },
@@ -293,8 +359,8 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = SecondaryAction,
-                            contentColor = PrimaryText
+                            containerColor = CreateSecondaryAction,
+                            contentColor = CreatePrimaryText
                         )
                     ) {
                         Text("Date: $dateDisplay")
@@ -308,17 +374,77 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = SecondaryAction,
-                            contentColor = PrimaryText
+                            containerColor = CreateSecondaryAction,
+                            contentColor = CreatePrimaryText
                         )
                     ) {
                         Text("Time: $timeDisplay")
                     }
 
+                    Button(
+                        onClick = {
+                            showNotificationPopup = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CreateSecondaryAction,
+                            contentColor = CreatePrimaryText
+                        )
+                    ) {
+                        Text("Event Notifications: " + if (notificationsEnabled) "On" else "Off")
+                    }
+
+                    Button(
+                        onClick = {
+                            val volunteer = buildCurrentVolunteerOrNull()
+                            if (volunteer == null) {
+                                formError = "Fill in all required fields, date, and time before adding to calendar."
+                            } else {
+                                EventShareUtils.openCalendarInsert(context, volunteer)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics {
+                                contentDescription = "Add event to local calendar"
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CreatePrimaryAction,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("Add to Calendar")
+                    }
+
+                    Button(
+                        onClick = {
+                            val volunteer = buildCurrentVolunteerOrNull()
+                            if (volunteer == null) {
+                                formError = "Fill in all required fields, date, and time before sharing by email."
+                            } else {
+                                EventShareUtils.openEmailShare(context, volunteer)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics {
+                                contentDescription = "Share event by email"
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CreatePrimaryAction,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("Share by Email")
+                    }
+
                     if (formError.isNotBlank()) {
                         Text(
                             text = formError,
-                            color = ErrorColor,
+                            color = CreateErrorColor,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.semantics {
                                 liveRegion = LiveRegionMode.Assertive
@@ -342,7 +468,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryAction,
+                        containerColor = CreatePrimaryAction,
                         contentColor = Color.Black
                     )
                 ) {
@@ -357,7 +483,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         },
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DestructiveAction,
+                            containerColor = CreateDestructiveAction,
                             contentColor = Color.Black
                         )
                     ) {
@@ -416,7 +542,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                 ) {
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = DialogBackground
+                        color = CreateDialogBackground
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -424,7 +550,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         ) {
                             Text(
                                 text = "Select time",
-                                color = PrimaryText,
+                                color = CreatePrimaryText,
                                 fontWeight = FontWeight.Bold
                             )
 
@@ -458,6 +584,129 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
             }
         }
 
+        if (showNotificationPopup) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 160.dp)
+                        .background(
+                            color = CreateDialogBackground,
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        .padding(24.dp)
+                        .semantics {
+                            contentDescription = "Event notification settings dialog"
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Event Notifications",
+                            color = CreatePrimaryText,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = if (VolunteerStore.areGlobalNotificationsEnabled()) {
+                                "Turn notifications for this event on or off."
+                            } else {
+                                "Global notifications are off in Settings. This event preference will still be saved."
+                            },
+                            color = CreateSecondaryText
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (notificationsEnabled) "On" else "Off",
+                                color = CreatePrimaryText
+                            )
+
+                            Switch(
+                                checked = notificationsEnabled,
+                                onCheckedChange = { notificationsEnabled = it },
+                                modifier = Modifier.semantics {
+                                    contentDescription = "Notifications for this event"
+                                    stateDescription = if (notificationsEnabled) "On" else "Off"
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.Black,
+                                    checkedTrackColor = CreatePrimaryAction,
+                                    uncheckedThumbColor = CreatePrimaryText,
+                                    uncheckedTrackColor = CreateBorderColor
+                                )
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Button(
+                                onClick = { showNotificationPopup = false },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CreateSecondaryAction,
+                                    contentColor = CreatePrimaryText
+                                )
+                            ) {
+                                Text("Done")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (showInvalidEmailDialog) {
+            AlertDialog(
+                onDismissRequest = { },
+                title = {
+                    Text("Invalid Email")
+                },
+                text = {
+                    Text("Invalid domain / Email could not be verified.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showInvalidEmailDialog = false
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        if (showInvalidPhoneDialog) {
+            AlertDialog(
+                onDismissRequest = { },
+                title = {
+                    Text("Invalid Phone Number")
+                },
+                text = {
+                    Text("Phone number must contain only digits (0–9).")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showInvalidPhoneDialog = false
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
         if (showPopup) {
             Box(
                 modifier = Modifier
@@ -470,7 +719,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 120.dp)
                         .background(
-                            color = DialogBackground,
+                            color = CreateDialogBackground,
                             shape = RoundedCornerShape(24.dp)
                         )
                         .padding(24.dp)
@@ -486,7 +735,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             } else {
                                 "Continue with these changes?"
                             },
-                            color = PrimaryText,
+                            color = CreatePrimaryText,
                             fontWeight = FontWeight.Bold
                         )
 
@@ -496,7 +745,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             } else {
                                 "Review the information before confirming."
                             },
-                            color = SecondaryText
+                            color = CreateSecondaryText
                         )
 
                         Row(
@@ -506,7 +755,9 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             Button(
                                 onClick = {
                                     if (popupAction == "submit") {
-                                        if (name.isBlank() ||
+
+                                        if (
+                                            name.isBlank() ||
                                             email.isBlank() ||
                                             phone.isBlank() ||
                                             eventName.isBlank() ||
@@ -519,6 +770,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
                                         val finalDate = selectedDate
                                         if (finalDate == null) {
+
                                             formError = "Please select a date."
                                             showPopup = false
                                             return@Button
@@ -533,13 +785,14 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
                                         val volunteer = Volunteer(
                                             name = name,
-                                            email = email,
-                                            phone = phone,
+                                            email = email.trim(),
+                                            phone = phone.trim(),
                                             eventName = eventName,
                                             role = role,
                                             notes = notes,
                                             date = finalDate,
-                                            time = finalTime
+                                            time = finalTime,
+                                            notificationsEnabled = notificationsEnabled
                                         )
 
                                         if (isEditing) {
@@ -559,7 +812,7 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (popupAction == "delete") DestructiveAction else PrimaryAction,
+                                    containerColor = if (popupAction == "delete") CreateDestructiveAction else CreatePrimaryAction,
                                     contentColor = Color.Black
                                 )
                             ) {
@@ -574,8 +827,8 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
                             Button(
                                 onClick = { showPopup = false },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = SecondaryAction,
-                                    contentColor = PrimaryText
+                                    containerColor = CreateSecondaryAction,
+                                    contentColor = CreatePrimaryText
                                 )
                             ) {
                                 Text("Cancel")
@@ -590,20 +843,20 @@ fun CreateEventScreen(volunteerIndex: Int = -1) {
 
 @Composable
 private fun accessibleTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = PanelBackground,
-    unfocusedContainerColor = PanelBackground,
-    focusedBorderColor = PrimaryAction,
-    unfocusedBorderColor = BorderColor,
-    focusedTextColor = PrimaryText,
-    unfocusedTextColor = PrimaryText,
-    focusedLabelColor = PrimaryAction,
-    unfocusedLabelColor = SecondaryText,
-    focusedPlaceholderColor = SecondaryText,
-    unfocusedPlaceholderColor = SecondaryText,
-    focusedSupportingTextColor = SecondaryText,
-    unfocusedSupportingTextColor = SecondaryText,
-    errorBorderColor = ErrorColor,
-    errorLabelColor = ErrorColor,
-    errorTextColor = PrimaryText,
-    cursorColor = PrimaryAction
+    focusedContainerColor = CreatePanelBackground,
+    unfocusedContainerColor = CreatePanelBackground,
+    focusedBorderColor = CreatePrimaryAction,
+    unfocusedBorderColor = CreateBorderColor,
+    focusedTextColor = CreatePrimaryText,
+    unfocusedTextColor = CreatePrimaryText,
+    focusedLabelColor = CreatePrimaryAction,
+    unfocusedLabelColor = CreateSecondaryText,
+    focusedPlaceholderColor = CreateSecondaryText,
+    unfocusedPlaceholderColor = CreateSecondaryText,
+    focusedSupportingTextColor = CreateSecondaryText,
+    unfocusedSupportingTextColor = CreateSecondaryText,
+    errorBorderColor = CreateErrorColor,
+    errorLabelColor = CreateErrorColor,
+    errorTextColor = CreatePrimaryText,
+    cursorColor = CreatePrimaryAction
 )
